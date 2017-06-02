@@ -1,13 +1,58 @@
 from .arduino import *
-from app import application
-from flask import request, jsonify
-import requests, re
+from app import application, socketio, emit, join_room, leave_room, \
+    close_room, rooms, disconnect, send
+from flask import request, jsonify, request
+#import requests, re
 from . import models
 
 @application.route('/')
 def hello_world():
     models.db.create_all()  # db를 만듭니다.
-    return 'Hello Arduino\n'
+    return 'DB created\n'
+
+
+@application.route('/water/<string:id>', methods=['GET'])
+def callback(id):
+    cur_ardu = models.arduino.query.filter_by(arduino_id=id).first()
+    sid = cur_ardu.sid
+    socketio.send({"data":"water"}, room=sid) # data 키의 값에 원하는 문자열을 집어 넣으면 아두이노가 그대로 parse 한다.
+    return "message sent to sid:"+sid
+
+@socketio.on('arduino_in')
+def echo_message(message):
+    arduino_id = str(message['id'])
+    print("arduino id: "+arduino_id)
+    sid = request.sid
+    cur_ardu = models.arduino.query.filter_by(arduino_id=arduino_id).first()
+
+    if (cur_ardu == None): # 새 아두이노 등록
+        newArduino = models.arduino(arduino_id)
+        models.db.session.add(newArduino)
+        models.db.session.commit()
+        cur_ardu = models.arduino.query.filter_by(arduino_id=arduino_id).first()
+        print( "arduino registered. ID: "+arduino_id)
+
+    cur_ardu.sid = str(request.sid)
+    models.db.session.commit()
+    print("arduino "+arduino_id+" Loged in: "+sid)
+    #emit("this is emit message from def  echo_message")
+
+# @socketio.on('join')
+# def join_room(data):
+#     username = session['username']
+#     room = data['']
+#     join_room(room)
+#     print("someone entered the room")
+#     send("you have entered room: "+room)
+
+@socketio.on('connect')
+def connected_message():
+    pass
+    #print("someone connected!")
+    #print("sid is..."+request.sid)
+    #send("this is send message from def connected_message")
+    #emit("this is emit message from def connected_message")
+
 
 @application.route('/status_send/<string:txt>', methods=['GET']) #/<string:txt>', methods=['GET']
 def status_send(txt):
@@ -20,15 +65,17 @@ def status_get():
     result = {"temperature":status.temperature, "humidity":status.humidity, "water_level":status.water_level }
     return jsonify(result)
 
-@application.route('/water/<string:id>', methods=['GET'])
-def water(id):
-    cur_ardu = models.arduino.query.filter_by(arduino_id = id).first()
-    if (cur_ardu != None):
-        cur_ardu.water_flag = True
-        models.db.session.commit()
-        return "water flag set to on ID: " + str(id)
-    else:
-        return "no arduino found with ID:" + str(id)
+# @application.route('/water/<string:id>', methods=['GET'])
+# def water(id):
+#     cur_ardu = models.arduino.query.filter_by(arduino_id = id).first()
+#     if (cur_ardu != None):
+#         cur_ardu.water_flag = True
+#         models.db.session.commit()
+#         return "water flag set to on ID: " + str(id)
+#     else:
+#         return "no arduino found with ID:" + str(id)
+
+
 
 @application.route('/led_on/<string:id>', methods=['GET'])
 def led_on(id):

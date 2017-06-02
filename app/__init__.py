@@ -1,10 +1,18 @@
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
+from flask_socketio import SocketIO, emit, join_room, leave_room, \
+    close_room, rooms, disconnect, send
 import os
 
 application = Flask(__name__)
+application.config['SECRET_KEY'] = 'secreet!'
 application.config.from_object('config') # config 파일을 불러와서 app객체를 설정합니다.
+async_mode =None
+thread = None
+
 db=SQLAlchemy(application)
+
+socketio = SocketIO(application, async_mode= async_mode)
 
 from app import views, models, arduino # import 자체가 아무 일도 하지 않는 것이 아님. views에 작성된 코드를 실행 하는 것 같다.
 

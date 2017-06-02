@@ -26,6 +26,7 @@ class arduino(db.Model):
     led_on_flag = db.Column(db.BOOLEAN)
     led_off_flag = db.Column(db.BOOLEAN)
     flush_flag = db.Column(db.BOOLEAN)
+    sid = db.Column(db.String)
     #plant_status = db.relationship()
 
     def __init__(self, id, delay=2000):
@@ -36,3 +37,4 @@ class arduino(db.Model):
         self.led_on_flag = False
         self.led_off_flag = False
         self.flush_flag = False
+        self.sid = "unknown"
